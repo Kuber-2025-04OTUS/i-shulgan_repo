@@ -14,6 +14,7 @@ spec:
     metadata:
       labels: *labels
     spec:
+      serviceAccountName: monitoring
       nodeSelector:
         homework: "true"
       volumes:
