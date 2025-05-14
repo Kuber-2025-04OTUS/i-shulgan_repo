@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: homework-cm
+  namespace: homework
+data:
+  file: |
+    Файл из ConfigMap homework-cm.
+  file.json: |
+    {
+      "key": "value"
+    }
+  key: value
