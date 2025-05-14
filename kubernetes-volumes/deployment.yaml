@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: homework-deployment
+  namespace: homework
+  labels: &labels
+    app.kubernetes.io/name: nginx
+    app.kubernetes.io/instance: homework
+spec:
+  replicas: 3
+  selector:
+    matchLabels: *labels
+  template:
+    metadata:
+      labels: *labels
+    spec:
+      nodeSelector:
+        homework: "true"
+      volumes:
+        - name: shared-volume
+          persistentVolumeClaim:
+            claimName: homework-pvc
+        - name: nginx-config
+          configMap:
+            name: nginx-config
+        - name: homework-cm
+          configMap:
+            name: homework-cm
+      initContainers:
+        - name: init-container
+          image: busybox:1.37.0
+          command:
+            - sh
+            - '-c'
+            - >-
+              echo "<html><body><h1>Hello from $(hostname)!</h1></body></html>" > /init/index.html
+          volumeMounts:
+            - name: shared-volume
+              mountPath: /init
+      containers:
+        - name: web-server
+          image: nginx:1.28.0-alpine-slim
+          command:
+            - nginx
+            - '-g'
+            - daemon off;
+          ports:
+            - name: http
+              containerPort: 8000
+              protocol: TCP
+          volumeMounts:
+            - name: shared-volume
+              mountPath: /homework
+            - name: nginx-config
+              mountPath: /etc/nginx/conf.d
+            - name: homework-cm
+              mountPath: /homework/conf
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /index.html
+              port: 8000
+            initialDelaySeconds: 3
+            periodSeconds: 10
+            failureThreshold: 3
+          lifecycle:
+            preStop:
+              exec:
+                command:
+                  - /bin/sh
+                  - '-c'
+                  - rm -f /homework/index.html
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 1
