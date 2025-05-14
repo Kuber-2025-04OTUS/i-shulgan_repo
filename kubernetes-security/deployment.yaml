@@ -33,8 +33,12 @@ spec:
           command:
             - sh
             - '-c'
-            - >-
-              echo "<html><body><h1>Hello from $(hostname)!</h1></body></html>" > /init/index.html
+            - >
+              echo "<html><body><h1>Hello from $(hostname)!</h1></body></html>" > /init/index.html;
+              TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token);
+              wget --no-check-certificate \
+                --header="Authorization: Bearer ${TOKEN}" \
+                -O /init/metrics.html https://kubernetes.default.svc/metrics
           volumeMounts:
             - name: shared-volume
               mountPath: /init
