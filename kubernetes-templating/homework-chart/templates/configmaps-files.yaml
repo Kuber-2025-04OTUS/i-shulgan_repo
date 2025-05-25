@@ -1,0 +1,17 @@
+{{- $localDict := dict "previous" "-"}}
+{{- range $path, $bytes  := $.Files.Glob "files/**" }}
+{{- $folder := base (dir $path) }}
+{{- $fullPath := printf "files/%s/*" $folder }}
+{{- if not (eq $folder $localDict.previous)}}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $folder }}
+  labels:
+    {{- include "homework-chart.labels" $ | nindent 4 }}
+data:
+{{- (tpl ($.Files.Glob $fullPath).AsConfig $ ) | nindent 2 }}
+{{- end }}
+{{- $_ := set $localDict "previous" $folder -}}
+{{- end }}

@@ -1,0 +1,8 @@
+Доя доступа к приложению перейдите по ссылкамам:
+{{- if .Values.ingress.enabled }}
+{{- range $host := .Values.ingress.hosts }}
+  http://{{ $host.host }}/homepage
+  http://{{ $host.host }}/metrics.html
+  http://{{ $host.host }}/conf/file.json
+{{- end }}
+{{- end }}

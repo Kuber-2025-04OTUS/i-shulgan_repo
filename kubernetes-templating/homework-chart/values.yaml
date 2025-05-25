@@ -1,0 +1,142 @@
+replicaCount: 3
+
+image:
+  repository: nginx
+  tag: 1.28.0-alpine-slim
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+nginxContainerName: web-server
+
+podAnnotations: {}
+
+podLabels: {}
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+serviceAccount:
+  name: monitoring
+
+clusterRole:
+  name: metrics-reader
+
+ClusterRoleBinding:
+  name: monitoring-metrics-binding
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+service:
+  type: ClusterIP
+  port: 8000
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+  hosts:
+    - host: homework.otus
+      paths:
+        - path: /homepage(/|$)(.*)
+          pathType: ImplementationSpecific
+        - path: /()(.*)
+          pathType: ImplementationSpecific
+  tls: []
+  #  - secretName: chart-example-tls
+  #    hosts:
+  #      - chart-example.local
+
+resources: {} 
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+
+livenessProbe:
+  httpGet:
+    path: /healthz
+    port: 8000
+  initialDelaySeconds: 10
+  periodSeconds: 30
+  failureThreshold: 3
+readinessProbe:
+  httpGet:
+    path: /index.html
+    port: 8000
+  initialDelaySeconds: 3
+  periodSeconds: 10
+  failureThreshold: 3
+
+lifecycle:
+  preStop:
+    exec:
+      command:
+        - /bin/sh
+        - '-c'
+        - rm -f /homework/index.html
+
+volumes:
+  - name: shared-volume
+    persistentVolumeClaim:
+      claimName: homework-pvc
+  - name: nginx-config
+    configMap:
+      name: nginx-config
+  - name: homework-cm
+    configMap:
+      name: homework-cm
+
+volumeMounts:
+  - name: shared-volume
+    mountPath: /homework
+  - name: nginx-config
+    mountPath: /etc/nginx/conf.d
+  - name: homework-cm
+    mountPath: /homework/conf
+
+nodeSelector:
+  homework: "true"
+
+strategy:
+  rollingUpdate:
+    maxUnavailable: 1
+
+initContainer:
+  name: init-container
+  image:
+    repository: busybox
+    tag: 1.37.0
+  volumeMounts:
+    - name: shared-volume
+      mountPath: /init
+
+persistentVolumeClaim:
+  name: homework-pvc
+  storage: 10Mi
+  storageClassName: homework-sc
+
+storageClass:
+  create: true
+  name: homework-sc
+
+redis:
+  enabled: true
+  architecture: standalone
+  auth:
+    enabled: false
+  commonConfiguration: |-
+    appendonly no
+    save ""
