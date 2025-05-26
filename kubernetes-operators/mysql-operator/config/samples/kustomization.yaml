@@ -1,0 +1,4 @@
+## Append samples of your project ##
+resources:
+- otus_v1_mysql.yaml
+#+kubebuilder:scaffold:manifestskustomizesamples
