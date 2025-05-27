@@ -41,5 +41,5 @@ roleRef:
   name: mysql-operator-role
 subjects:
   - kind: ServiceAccount
-    name: full-access
+    name: mysql-operator
     namespace: mysql-operator 
