@@ -13,7 +13,7 @@ spec:
       labels:
         app: mysql-operator
     spec:
-      serviceAccountName: full-access
+      serviceAccountName: mysql-operator
       containers:
         - name: mysql-operator
           image: roflmaoinmysoul/mysql-operator:1.0.0
