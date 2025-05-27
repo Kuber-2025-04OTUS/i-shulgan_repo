@@ -1,0 +1,23 @@
+# permissions for end users to view mysqls.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: mysql-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: mysql-viewer-role
+rules:
+- apiGroups:
+  - otus.homework
+  resources:
+  - mysqls
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - otus.homework
+  resources:
+  - mysqls/status
+  verbs:
+  - get
