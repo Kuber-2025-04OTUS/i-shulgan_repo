@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-config
+  namespace: homework
+data:
+  default.conf: |
+    server {
+        listen       8000;
+
+        location / {
+          add_header Content-Type text/html;
+          return 200 '<html><body><h1>Homework 8</h1></body></hmtl>';
+        }
+
+        location /healthz {
+          return 200 'alive\n';
+          add_header Content-Type text/plain;
+          access_log off;
+        }
+
+        location ~ /stub-status {
+        stub_status on;
+        access_log off;
+        allow 127.0.0.1;
+        deny all;
+      }
+    }

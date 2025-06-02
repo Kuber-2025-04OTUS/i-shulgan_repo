@@ -1,0 +1,19 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    release: monitoring
+  name: homework
+  namespace: homework
+spec:
+  endpoints:
+    - interval: 30s
+      port: metrics
+      scrapeTimeout: 3s
+  namespaceSelector:
+    matchNames:
+      - homework
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: nginx
+      app.kubernetes.io/instance: homework

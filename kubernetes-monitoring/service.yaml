@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: homework-service
+  namespace: homework
+  labels:
+    app.kubernetes.io/name: nginx
+    app.kubernetes.io/instance: homework
+spec:
+  selector:
+    app.kubernetes.io/name: nginx
+    app.kubernetes.io/instance: homework
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: http
+    - name: metrics
+      protocol: TCP
+      port: 9100
+      targetPort: metrics
+  type: ClusterIP
