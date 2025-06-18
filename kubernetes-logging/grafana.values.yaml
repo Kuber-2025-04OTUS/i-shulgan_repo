@@ -1,0 +1,17 @@
+nodeSelector:
+  node-role: infra
+tolerations:
+  - key: "node-role"
+    operator: "Equal"
+    value: "infra"
+    effect: "NoSchedule"
+
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+    - name: Loki
+      type: loki
+      url: http://loki.loki.svc.cluster.local:3100/
+      access: proxy
+      isDefault: true

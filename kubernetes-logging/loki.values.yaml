@@ -1,0 +1,73 @@
+loki:
+  auth_enabled: false
+  commonConfig:
+    replication_factor: 1
+  schemaConfig:
+    configs:
+      - from: 2025-06-01
+        store: tsdb
+        object_store: s3
+        schema: v13
+        index:
+          prefix: loki_index_
+          period: 24h
+  storage:
+    bucketNames:
+      admin: loki-logs-k8s-project
+      chunks: loki-logs-k8s-project
+      ruler: loki-logs-k8s-project
+    s3:
+      accessKeyId: xxxxx
+      endpoint: storage.yandexcloud.net
+      region: ru-central1
+      s3ForcePathStyle: false
+      secretAccessKey: xxxxx
+  ingester:
+    chunk_encoding: snappy
+  tracing:
+    enabled: true
+  querier:
+    max_concurrent: 2
+
+deploymentMode: SingleBinary
+singleBinary:
+  nodeSelector:
+    node-role: infra
+  tolerations:
+    - key: "node-role"
+      operator: "Equal"
+      value: "infra"
+      effect: "NoSchedule"
+  replicas: 1
+  resources:
+    limits:
+      cpu: 3
+      memory: 4Gi
+    requests:
+      cpu: 2
+      memory: 2Gi
+  extraEnv:
+    - name: GOMEMLIMIT
+      value: 3750MiB
+
+backend:
+  replicas: 0
+read:
+  replicas: 0
+write:
+  replicas: 0
+
+gateway:
+  enabled: false
+
+test:
+  enabled: false
+
+lokiCanary:
+  enabled: false
+
+chunksCache:
+  enabled: false
+
+resultsCache:
+  enabled: false
