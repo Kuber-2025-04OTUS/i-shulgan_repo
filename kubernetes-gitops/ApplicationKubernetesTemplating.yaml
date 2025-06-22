@@ -1,0 +1,30 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kubernetes-templating
+  namespace: argo-cd
+spec:
+  destination:
+    namespace: homeworkhelm
+    server: https://kubernetes.default.svc
+  project: otus
+  source:
+    helm:
+      parameters:
+        - name: storageClass.create
+          value: 'false'
+        - name: persistentVolumeClaim.storageClassName
+          value: 'yc-network-hdd'
+        - name: persistentVolumeClaim.storage
+          value: 8Mi
+        - name: replicaCount
+          value: '2'
+    path: kubernetes-templating/homework-chart
+    repoURL: https://github.com/Kuber-2025-04OTUS/i-shulgan_repo.git
+    targetRevision: HEAD
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
