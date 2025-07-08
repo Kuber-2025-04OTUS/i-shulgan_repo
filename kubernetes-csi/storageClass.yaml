@@ -1,0 +1,19 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: csi-s3
+provisioner: ru.yandex.s3.csi
+parameters:
+  bucket: k8s-project-csi
+  csi.storage.k8s.io/controller-publish-secret-name: csi-s3-secret
+  csi.storage.k8s.io/controller-publish-secret-namespace: yandex-csi-s3
+  csi.storage.k8s.io/node-publish-secret-name: csi-s3-secret
+  csi.storage.k8s.io/node-publish-secret-namespace: yandex-csi-s3
+  csi.storage.k8s.io/node-stage-secret-name: csi-s3-secret
+  csi.storage.k8s.io/node-stage-secret-namespace: yandex-csi-s3
+  csi.storage.k8s.io/provisioner-secret-name: csi-s3-secret
+  csi.storage.k8s.io/provisioner-secret-namespace: yandex-csi-s3
+  mounter: geesefs
+  options: '--memory-limit 1000 --dir-mode 0777 --file-mode 0666'
+reclaimPolicy: Delete
+volumeBindingMode: Immediate
