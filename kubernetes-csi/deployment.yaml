@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: csi-s3-test
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: csi-s3-test
+  template:
+    metadata:
+      labels:
+        app: csi-s3-test
+    spec:
+      containers:
+        - name: busybox
+          image: busybox
+          command: ["/bin/sh", "-c"]
+          args:
+            - i=1; while true; do touch /data/file$i; i=$((i+1)); sleep 10; done
+          volumeMounts:
+            - mountPath: /data
+              name: s3-volume
+      volumes:
+        - name: s3-volume
+          persistentVolumeClaim:
+            claimName: csi-s3-pvc
