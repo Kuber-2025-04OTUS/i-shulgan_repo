@@ -1,0 +1,154 @@
+---
+- hosts: all
+  gather_facts: false
+  become: true
+  vars:
+    k8s_version: 1.32.7
+    k8s_repo_url: "https://pkgs.k8s.io/core:/stable:/v{{ k8s_version | regex_replace('^([0-9]+\\.[0-9]+).*', '\\1') }}/deb/"
+    packages:
+      - kubectl
+      - kubeadm
+      - kubelet
+  
+  pre_tasks:
+    - name: Wait for target connection to become reachable/usable
+      ansible.builtin.wait_for_connection:
+
+    - name: Gather facts after SSH becomes available
+      ansible.builtin.setup:
+
+  tasks:
+
+    - name: Download GPG key for k8s repository
+      ansible.builtin.get_url:
+        url: "{{ k8s_repo_url }}Release.key"
+        dest: /usr/share/keyrings/k8s-apt.asc
+        mode: u=rw,g=r,o=r
+
+    - name: Add Debian Linux repository
+      ansible.builtin.apt_repository:
+        repo: "deb [signed-by=/usr/share/keyrings/k8s-apt.asc] {{ k8s_repo_url }} /"
+        state: present
+        filename: k8s-apt
+        update_cache: true
+
+    - name: Install k8s packages
+      ansible.builtin.apt:
+        name: "{{ item }}={{ k8s_version }}*"
+        state: present
+        force: true
+        allow_downgrade: true
+        allow_change_held_packages: true
+        update_cache: true
+      loop: "{{ packages }}"
+
+    - name: Hold k8s packages
+      ansible.builtin.dpkg_selections:
+        name: "{{ item }}"
+        selection: hold
+      loop: "{{ packages }}"
+
+    - name: Download CNI plugins
+      get_url:
+        url: "https://github.com/containernetworking/plugins/releases/download/v1.7.1/cni-plugins-linux-amd64-v1.7.1.tgz"
+        dest: /tmp/cni-plugins.tgz
+        mode: '0644'
+
+    - name: Extract CNI plugins
+      unarchive:
+        src: /tmp/cni-plugins.tgz
+        dest: /opt/cni/bin
+        remote_src: true
+
+    - name: Install containerd
+      ansible.builtin.apt:
+        name: containerd
+        state: present
+        update_cache: true
+
+    - name: Apply defautl containerd config
+      shell: containerd config default > /etc/containerd/config.toml
+
+    - name: Enable SystemdCgroup in containerd config
+      ansible.builtin.replace:
+        path: /etc/containerd/config.toml
+        regexp: '^(\s*)SystemdCgroup = false'
+        replace: '\1SystemdCgroup = true'
+
+    - name: Restart containerd
+      ansible.builtin.systemd:
+        name: containerd
+        state: restarted
+
+    - name: Pull k8s images
+      ansible.builtin.command: kubeadm config images pull
+      changed_when: false
+
+    - ansible.posix.sysctl:
+        name: net.ipv4.ip_forward
+        value: '1'
+        sysctl_set: true
+        state: present
+        reload: true
+
+    - name: Ensure br_netfilter module is loaded
+      ansible.builtin.modprobe:
+        name: br_netfilter
+        state: present
+
+    - name: Ensure module is loaded on boot
+      ansible.builtin.copy:
+        dest: /etc/modules-load.d/k8s.conf
+        content: "br_netfilter\n"
+        mode: '0644'
+
+    - name: Set sysctl for bridge-nf-call-iptables
+      ansible.posix.sysctl:
+        name: net.bridge.bridge-nf-call-iptables
+        value: '1'
+        sysctl_set: true
+        state: present
+        reload: true
+
+- hosts: master-01
+  become: true
+  tasks:
+    - name: Init master
+      shell: kubeadm init --pod-network-cidr=10.244.0.0/16
+      args:
+        creates: /etc/kubernetes/admin.conf
+        executable: /bin/bash
+
+    - name: Create .kube directory
+      file:
+        path: /root/.kube
+        state: directory
+        mode: '0700'
+
+    - name: Copy admin.conf to root's kube config
+      copy:
+        src: /etc/kubernetes/admin.conf
+        dest: /root/.kube/config
+        remote_src: true
+        owner: root
+        group: root
+        mode: '0600'
+
+    - name: Install flannel
+      shell: kubectl apply -f https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml
+      args:
+        executable: /bin/bash
+
+    - name: Get join command
+      shell: kubeadm token create --print-join-command
+      args:
+        executable: /bin/bash
+      register: join_command
+
+- hosts: workers
+  become: true
+  tasks:
+    - name: Join workers
+      shell: "{{ hostvars['master-01']['join_command']['stdout'] }}"
+      args:
+        executable: /bin/bash

@@ -1,0 +1,5 @@
+yc_token     = "your-oauth-token"
+yc_cloud_id  = "your-cloud-id"
+yc_folder_id = "your-folder-id"
+yc_zone      = "ru-central1-a"
+project_name = "k8s-project"

@@ -1,0 +1,81 @@
+---
+- name: Upgrade master
+  hosts: master-01,workers
+  gather_facts: true
+  become: true
+  serial: 1
+  vars:
+    ansible_ssh_extra_args: '-o StrictHostKeyChecking=no'
+    k8s_version: 1.33.3
+    k8s_repo_url: "https://pkgs.k8s.io/core:/stable:/v{{ k8s_version | regex_replace('^([0-9]+\\.[0-9]+).*', '\\1') }}/deb/"
+    packages:
+      - kubectl
+      - kubeadm
+      - kubelet
+
+  tasks:
+
+    - name: Add Debian Linux repository
+      ansible.builtin.apt_repository:
+        repo: "deb [signed-by=/usr/share/keyrings/k8s-apt.asc] {{ k8s_repo_url }} /"
+        state: present
+        filename: k8s-apt
+        update_cache: true
+
+    - name: Install k8s packages
+      ansible.builtin.apt:
+        name: "{{ item }}={{ k8s_version }}*"
+        state: present
+        force: true
+        allow_downgrade: true
+        allow_change_held_packages: true
+        update_cache: true
+      loop: "{{ packages }}"
+
+    - name: Hold k8s packages
+      ansible.builtin.dpkg_selections:
+        name: "{{ item }}"
+        selection: hold
+      loop: "{{ packages }}"
+
+    - name: Pull k8s images
+      ansible.builtin.command: kubeadm config images pull
+      changed_when: false
+
+    - name: kubeadm upgrade apply
+      ansible.builtin.command: kubeadm upgrade apply v{{k8s_version}} -y
+      when: inventory_hostname == "master-01"
+
+    - name: kubeadm upgrade worke nodes
+      ansible.builtin.command: kubeadm upgrade node
+      when: "'workers' in group_names"
+
+    - name: Drain node
+      shell: kubectl drain {{ inventory_hostname }} --ignore-daemonsets
+      args:
+        executable: /bin/bash
+      delegate_to: master-01
+
+    - name: Restart kubelet
+      ansible.builtin.systemd:
+        name: kubelet
+        state: restarted
+        daemon_reload: true
+  
+    - name: Wait for Kubernetes API to be available
+      uri:
+        url: https://127.0.0.1:6443/healthz
+        method: GET
+        validate_certs: no
+        status_code: 200
+      register: result
+      retries: 20
+      delay: 15
+      until: result.status == 200
+      when: inventory_hostname == "master-01"
+
+    - name: Uncordon node
+      shell: kubectl uncordon {{ inventory_hostname }}
+      args:
+        executable: /bin/bash
+      delegate_to: master-01

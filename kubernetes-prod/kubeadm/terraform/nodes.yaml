@@ -1,0 +1,19 @@
+master-01:
+  cpu: 2
+  memory: 8
+  disk: 30
+
+worker-01:
+  cpu: 2
+  memory: 8
+  disk: 30
+
+worker-02:
+  cpu: 2
+  memory: 8
+  disk: 30
+
+worker-03:
+  cpu: 2
+  memory: 8
+  disk: 30
