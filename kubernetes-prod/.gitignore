@@ -1,0 +1,7 @@
+**/.terraform
+**/.terraform.lock.hcl
+**/terraform.tfstate
+**/terraform.tfstate.backup
+**/.terraform.tfstate.lock.info
+**/local.auto.tfvars
+**/id_ed25519
